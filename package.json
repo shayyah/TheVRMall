@@ -15,5 +15,11 @@
   "bugs": {
     "url": "https://github.com/Steve-B313/ChatSever/issues"
   },
-  "homepage": "https://github.com/Steve-B313/ChatSever#readme"
+  "homepage": "https://github.com/Steve-B313/ChatSever#readme",
+  "dependencies": {
+    "express": "^4.16.4",
+    "mongodb": "^3.1.13",
+    "short-id": "0.1.0-1",
+    "socket.io": "^2.2.0"
+  }
 }
