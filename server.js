@@ -8,7 +8,9 @@ var ObjectID = require('mongodb').ObjectID;
 var url = process.env.MONGODB_URI || process.env.MONGOHQ_URL || "mongodb://localhost:27017/";
 var shortid=require('short-id');
 var port=process.env.PORT || 3000;
-server.listen(port);
+server.listen(port,function() {
+    console.log("App is running on port " + port);
+});
 console.log('server started');
 
 
