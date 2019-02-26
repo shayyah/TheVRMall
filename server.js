@@ -7,7 +7,7 @@ var ObjectID = require('mongodb').ObjectID;
 
 var url = process.env.MONGODB_URI || process.env.MONGOHQ_URL || "mongodb://localhost:27017/";
 var shortid=require('short-id');
-var port=process.env.PORT||3000;
+var port=process.env.PORT || 3000;
 server.listen(port);
 console.log('server started');
 
@@ -15,7 +15,7 @@ console.log('server started');
 //myserver
 
 app.get('/', function (req, res) {
-  res.send('server working good"/"');
+  res.send('server working good');
 });
 var sockets = [];//todo
 MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
