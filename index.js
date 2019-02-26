@@ -5,7 +5,7 @@ var io = require('socket.io')(server);
 var MongoClient = require('mongodb').MongoClient;
 var ObjectID = require('mongodb').ObjectID;
 
-var url = "mongodb://localhost:27017/";
+var url = process.env.MONGODB_URI || process.env.MONGOHQ_URL || "mongodb://localhost:27017/";
 var shortid=require('short-id');
 var port = process.env.PORT || 3000;
 server.listen(port,function(){
