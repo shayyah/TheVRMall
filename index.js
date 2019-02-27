@@ -23,7 +23,7 @@ var sockets = [];//todo
 MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
   console.log('mongodb connected  '+url);
   if (err) return;
-  var dbo = db.db("mydb");
+  var dbo = db.db("heroku_28p5l3pz");
   console.log(dbo);
   var rooms=[];
   io.on('connection', function (socket) {
