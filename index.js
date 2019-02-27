@@ -57,15 +57,15 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
           dbo.collection(player.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
             if (err) return;
             console.log("1 document updated");
-             console.log(player.friends.length);
+              console.log('player login: ' + player.name+'   '+player.id);
             socket.emit('loginDone', player);
           });
         }
         else{
            savePlayerInDB(data, curId, function (player) {
-            console.log('player register: ' + player.name);
+            console.log('player register: ' + player.name+'   '+player.id);
             myId = player.id;
-            socket.emit('loginDone', player);
+            socket.emit('register', player);
         });
       }
 
@@ -643,22 +643,22 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
     dbo.collection("user").insertOne(userToSave, function (err, res) {
       if (err) return;
       console.log("(1) user inserted: " + userToSave.name);
+      if (player.isStore == true) {
+        var storeToSave = userToSave;
+        storeToSave.owners = [{
+          id: userToSave.id,
+          name: userToSave.name
+        }];
+        dbo.collection("store").insertOne(storeToSave, function (err, res) {
+          if (err) return;
+          console.log("(1) store inserted: " + storeToSave.name);
+          callback(storeToSave);
+        });
+      }
+      else callback(userToSave);
     });
 
-    if (player.isStore == true) {
-      var storeToSave = userToSave;
-      storeToSave.owners = [{
-        id: userToSave.id,
-        name: userToSave.name
-      }];
-      dbo.collection("store").insertOne(storeToSave, function (err, res) {
-        if (err) return;
-        console.log("(1) store inserted: " + storeToSave.name);
-        callback(storeToSave);
-      });
-    } else {
-      callback(userToSave);
-    }
+
   }
 
   function getMessages(id, myPlayer, callback) {//SalimEdition
