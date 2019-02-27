@@ -9,7 +9,7 @@ var url = process.env.MONGODB_URI || process.env.MONGOHQ_URL || "mongodb://local
 var shortid=require('short-id');
 var port = process.env.PORT || 3000;
 server.listen(port,function(){
-  console.log('server started on port   '+port);
+  console.log('server started on port   '+port+'    '+url);
 });
 
 
