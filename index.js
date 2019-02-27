@@ -21,6 +21,7 @@ app.get('/', function (req, res) {
 });
 var sockets = [];//todo
 MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
+  console.log('mongodb connected  '+url);
   if (err) return;
   var dbo = db.db("mydb");
   var rooms=[];
@@ -51,6 +52,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
       console.log('player login: ' + data.name);
       getPlayer(data.id, function (player) {
         if (player != null) {
+          console.log('player  info   '+player.name);
           myId = player.id;
           var query = { id: player.id };
           var newvalues = { $set: { online: true }, $push: { socketIds: socket.id }};
@@ -62,6 +64,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
           });
         }
         else{
+          console.log('go to register');
            savePlayerInDB(data, curId, function (player) {
             console.log('player register: ' + player.name+'   '+player.id);
             myId = player.id;
