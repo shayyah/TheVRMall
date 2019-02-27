@@ -17,7 +17,7 @@ server.listen(port,function(){
 //myserver
 
 app.get('/', function (req, res) {
-  res.send('server working good"/"');
+  res.send('server working good   '+port);
 });
 var sockets = [];//todo
 MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
