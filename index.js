@@ -24,6 +24,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
   console.log('mongodb connected  '+url);
   if (err) return;
   var dbo = db.db("mydb");
+  console.log(dbo);
   var rooms=[];
   io.on('connection', function (socket) {
     sockets.push(socket);
@@ -640,11 +641,13 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
       position : pos,
       roomid :'',
       clothes:''
-
     };
+    console.log(socketId);
     userToSave.socketIds.push(socketId);
+    console.log('end init  '+userToSave.name);
     dbo.collection("user").insertOne(userToSave, function (err, res) {
-      if (err) return;
+      console.log(err);
+      if (err) console.log(err);
       console.log("(1) user inserted: " + userToSave.name);
       if (player.isStore == true) {
         var storeToSave = userToSave;
