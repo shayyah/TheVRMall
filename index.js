@@ -63,7 +63,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
               console.log('player login: ' + player.name+'   '+player.id);
               player.online=true;
               player.roomid='';
-              player.socketIds.Add(socket.id);
+              player.socketIds.push(socket.id);
             socket.emit('loginDone', player);
           });
         }
