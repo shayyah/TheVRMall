@@ -446,7 +446,10 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
     socket.on('disconnect', function () {//The user closed the app (disconnected)..
       console.log('removing user: ' + curId);
       getPlayer(myId, function (player) {
-        LeaveRoom(player);
+          console.log(JSON.stringify(player));
+        if(player.roomid!='')
+             LeaveRoom(player);
+          console.log('leaveDRoom');
           disconnection(player, socket.id);
       });
     });
@@ -469,6 +472,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
   }
   function LeaveRoom(user)
   {
+
     RemouveUserFromRoom(user.roomid,user);
     var roomId=user.roomid;
 
