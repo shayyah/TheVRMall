@@ -60,8 +60,11 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
           dbo.collection(player.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
             if (err) return;
             console.log("1 document updated");
-              console.log('player login: ' + res.name+'   '+res.id);
-            socket.emit('loginDone', res);
+              console.log('player login: ' + player.name+'   '+player.id);
+              player.online=true;
+              player.roomid='';
+              player.socketIds.Add(socket.id);
+            socket.emit('loginDone', player);
           });
         }
         else{
@@ -168,7 +171,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
           };
 
           io.to(curId).emit('friendRequestResponse', { status: data.status });
-          if (data.status == true) {
+          if (data.status == true||data.status == 'true') {
 
             player.socketIds.forEach(element => {//todo
                 io.to(element).emit('yourFriendRequestResponse',myPlayer);
