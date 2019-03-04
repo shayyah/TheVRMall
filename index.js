@@ -38,7 +38,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
       console.log(data);
       getPlayer(data.id, function (player) {
         if (player == null) {
-          savePlayerInDB(data, curId, function (player) {
+          savePlayerInDB(data, socket.id, function (player) {
             console.log('player register: ' + player.name);
             myId = player.id;
             socket.emit('register', player);//Tell the user that he registered successfully, and give him his data
@@ -63,16 +63,16 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
               console.log('player login: ' + player.name+'   '+player.id);
               player.online=true;
               player.roomid='';
-              player.socketIds.push(socket.id);
+              player.socketIds.push(curId);
             socket.emit('loginDone', player);
           });
         }
         else{
           console.log('go to register');
-           savePlayerInDB(data, curId, function (player) {
-            console.log('player register: ' + player.name+'   '+player.id);
+           savePlayerInDB(data, curId, function (Myplayer) {
+            console.log('player register: ' + Myplayer.name+'   '+Myplayer.id+'    '+JSON.stringify(Myplayer));
             myId = player.id;
-            socket.emit('register', player);
+            socket.emit('register', Myplayer);
         });
       }
 
@@ -169,10 +169,10 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
             requestHandler: player,
             status: data.status
           };
-
+          console.log(data.status);
           io.to(curId).emit('friendRequestResponse', { status: data.status });
           if (data.status == true||data.status == 'true') {
-
+            console.log(JSON.stringify(player));
             player.socketIds.forEach(element => {//todo
                 io.to(element).emit('yourFriendRequestResponse',myPlayer);
               });
