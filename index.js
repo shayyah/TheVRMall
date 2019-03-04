@@ -364,7 +364,6 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
        console.log('joinRandomGroup')
       // console.log(JSON.stringify(data));
         getPlayer(myId,function(player){
-
             var done=false;
             //console.log(player);
           //  console.log(rooms.length);
@@ -516,7 +515,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
        name:user.name,
        position:user.position,
        rotation:user.position,
-       socketId:(user.socketids!=null&&user.socketids[0]!=null)?user.socketids[0]:''
+       socketId:(user.socketIds!=null&&user.socketIds[0]!=null)?user.socketIds[0]:''
      };
      return SimpleUserMove;
 
