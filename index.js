@@ -71,7 +71,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
           console.log('go to register');
            savePlayerInDB(data, curId, function (Myplayer) {
             console.log('player register: ' + Myplayer.name+'   '+Myplayer.id+'    '+JSON.stringify(Myplayer));
-            myId = player.id;
+            myId = Myplayer.id;
             socket.emit('register', Myplayer);
         });
       }
