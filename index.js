@@ -56,7 +56,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
           console.log('player  info   '+player.name);
           myId = player.id;
           var query = { id: player.id };
-          var newvalues = { $set: { online: true },$set:{ roomid : ''}, $push: { socketIds: socket.id }};
+          var newvalues = { $set: { online: true, roomid:'' }, $push: { socketIds: socket.id }};
           dbo.collection(player.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
             if (err) return;
             console.log("1 document updated");
