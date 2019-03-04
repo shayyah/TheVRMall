@@ -174,6 +174,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
           if (data.status == true||data.status == 'true') {
             console.log(JSON.stringify(player));
             player.socketIds.forEach(element => {//todo
+              console.log(element);
                 io.to(element).emit('yourFriendRequestResponse',myPlayer);
               });
           }
