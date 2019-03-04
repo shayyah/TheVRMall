@@ -19,7 +19,7 @@ server.listen(port,function(){
 app.get('/', function (req, res) {
   res.send('server working good   '+port);
 });
-var sockets = [];//todo
+//var sockets = [];//todo
 MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
   console.log('mongodb connected  '+url);
   if (err) return;
@@ -27,7 +27,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
   console.log(dbo);
   var rooms=[];
   io.on('connection', function (socket) {
-    sockets.push(socket);
+    //sockets.push(socket);
     var curId = socket.id;
     var myId;
 
@@ -950,7 +950,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
               });
             }
   function disconnection(player,socketId) {
-      arrayRemove(sockets, socketId);
+  //    arrayRemove(sockets, socketId);
     var query = { id: player.id };
     var newvalues = {
       $set: { online: false, lastOnline: new Date() },
