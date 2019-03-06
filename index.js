@@ -325,22 +325,23 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
     socket.on('askforRooms',function(data){
       getPlayer(data.id,function(player){
         console.log('askforRooms  '+player.name +'   '+rooms.length);
-        for(var i=0;i<rooms.length;i++)
-        {
-
-          if(rooms[i].isprivate==true){
-            console.log('room  '+rooms[i].name+'   '+rooms[i].membersInvited.length);
-          for(var j=0;j<rooms[i].membersInvited.length;j++)
+        if(player!=null){
+          for(var i=0;i<rooms.length;i++)
           {
-              if(rooms[i].membersInvited[j].id==player.id)
-              {
-                io.to(curId).emit('roominvitation',rooms[i]);
-              }
 
-          }
+            if(rooms[i].isprivate==true){
+              console.log('room  '+rooms[i].name+'   '+rooms[i].membersInvited.length);
+              for(var j=0;j<rooms[i].membersInvited.length;j++)
+              {
+                if(rooms[i].membersInvited[j].id==player.id)
+                {
+                  io.to(curId).emit('roominvitation',rooms[i]);
+                }
+
+              }
+            }
           }
         }
-
       });
 
     });
@@ -451,8 +452,10 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
       getPlayer(myId, function (player) {
           console.log(JSON.stringify(player));
         if(player.roomid!='')
-             LeaveRoom(player);
+        {
+            LeaveRoom(player);
           console.log('leaveDRoom');
+        }
           disconnection(player, socket.id);
       });
     });
@@ -768,7 +771,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
       var query = { id: myPlayer.id };
 
       var newvalues = { $push: { requestsSent: { id: player.id, name: player.name } } };
-      dbo.collection(myPlayer.owners == undefined ? "user" : "store").update(query, newvalues, function (err, res) {
+      dbo.collection(myPlayer.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
         if (err) return;
         console.log("1 requestsSent inserted");
       });
@@ -776,7 +779,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
       //Update their requestsRecieved list
       var query2 = { id: player.id };
       var newvalues2 = { $push: { requestsRecieved: { id: myPlayer.id, name: myPlayer.name } } };
-      dbo.collection(player.owners == undefined ? "user" : "store").update(query2, newvalues2, function (err, res) {
+      dbo.collection(player.owners == undefined ? "user" : "store").updateOne(query2, newvalues2, function (err, res) {
         if (err) return;
         console.log("1 requestsRecieved inserted");
       });
@@ -787,7 +790,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
     //Remove request from my list.. I am the reciever
     var query = { id: myPlayer.id };
     var newvalues = { $pull: { requestsRecieved: { id: player.id, name: player.name } } };
-    dbo.collection(myPlayer.owners == undefined ? "user" : "store").update(query, newvalues, function (err, res) {
+    dbo.collection(myPlayer.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
       if (err) return;
       console.log("1 friendshipRecieved removed");
     });
@@ -795,7 +798,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
     //Remove request from their list.. they are the senders
     var query = { id: player.id };
     var newvalues = { $pull: { requestsSent: { id: myPlayer.id, name: myPlayer.name } } };
-    dbo.collection(player.owners == undefined ? "user" : "store").update(query, newvalues, function (err, res) {
+    dbo.collection(player.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
       if (err) return;
       console.log("1 requestSent removed");
     });
@@ -809,14 +812,14 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
     //Update my friends list
     var query = { id: myPlayer.id };
     var newvalues = { $push: { friends: { id: player.id, name: player.name } } };
-    dbo.collection(myPlayer.owners == undefined ? "user" : "store").update(query, newvalues, function (err, res) {
+    dbo.collection(myPlayer.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
       if (err) return;
       console.log("1 friendship inserted");
     });
     //Update their friends list
     query = { id: player.id };
     newvalues = { $push: { friends: { id: myPlayer.id, name: myPlayer.name } } };
-    dbo.collection(player.owners == undefined ? "user" : "store").update(query, newvalues, function (err, res) {
+    dbo.collection(player.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
       if (err) return;
       console.log("1 friendship inserted");
     });
@@ -827,7 +830,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
       //Remove friendship from my list
       var query = { id: myPlayer.id };
       var newvalues = { $pull: { friends: { id: player.id, name: player.name } } };
-      dbo.collection(myPlayer.owners == undefined ? "user" : "store").update(query, newvalues, function (err, res) {
+      dbo.collection(myPlayer.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
         if (err) return;
         console.log("1 friendship removed");
       });
@@ -835,7 +838,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
       //Remove friendship from their list
       var query = { id: player.id };
       var newvalues = { $pull: { friends: { id: myPlayer.id, name: myPlayer.name } } };
-      dbo.collection(player.owners == undefined ? "user" : "store").update(query, newvalues, function (err, res) {
+      dbo.collection(player.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
         if (err) return;
         console.log("1 friendship removed");
       });
@@ -848,14 +851,14 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
       //Update my friends list
       var query = { id: myPlayer.id };
       var newvalues = { $push: { blocks: { id: player.id, name: player.name } } };
-      dbo.collection(myPlayer.owners == undefined ? "user" : "store").update(query, newvalues, function (err, res) {
+      dbo.collection(myPlayer.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
         if (err) return;
         console.log("1 block inserted");
       });
       //Update their friends list
       query = { id: player.id };
       newvalues = { $push: { blockedBy: { id: myPlayer.id, name: myPlayer.name } } };
-      dbo.collection(player.owners == undefined ? "user" : "store").update(query, newvalues, function (err, res) {
+      dbo.collection(player.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
         if (err) return;
         console.log("1 blockedBy inserted");
       });
@@ -868,7 +871,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
       //Remove block from my list
       var query = { id: myPlayer.id };
       var newvalues = { $pull: { blocks: { id: player.id, name: player.name } } };
-      dbo.collection(myPlayer.owners == undefined ? "user" : "store").update(query, newvalues, function (err, res) {
+      dbo.collection(myPlayer.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
         if (err) return;
         console.log("1 block removed");
       });
@@ -876,7 +879,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
       //Remove blockedBy from their list
       var query = { id: player.id };
       var newvalues = { $pull: { blockedBy: { id: myPlayer.id, name: myPlayer.name } } };
-      dbo.collection(player.owners == undefined ? "user" : "store").update(query, newvalues, function (err, res) {
+      dbo.collection(player.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
         if (err) return;
         console.log("1 blockedBy removed");
       });
@@ -903,7 +906,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
   function addGroupToMember(group, player) {
     var query = { id: player.id };
     var newvalues = { $push: { groups: { id: group.id, name: group.name } } };
-    dbo.collection(player.owners == undefined ? "user" : "store").update(query, newvalues, function (err, res) {
+    dbo.collection(player.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
       if (err) return;
       console.log("1 group inserted to user: " + player.name);
     });
@@ -913,7 +916,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
     getPlayer(memberId, function (player) {
       var query = { id: group.id };
       var newvalues = { $push: { members: { id: player.id, name: player.name } } };
-      dbo.collection("group").update(query, newvalues, function (err, res) {
+      dbo.collection("group").updateOne(query, newvalues, function (err, res) {
         if (err) return;
         console.log("1 user added to group");
         addGroupToMember(groupId, player);
@@ -945,7 +948,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
     function removeGroupFromMember(group, player) {
         var query = { id: player.id };
           var newvalues = { $pull: { groups: { id: group.id, name: group.name } } };
-          dbo.collection(player.owners == undefined ? "user" : "store").update(query, newvalues, function (err, res) {
+          dbo.collection(player.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
               if (err) return;
                 console.log("1 group removed from user: " + player.name);
               });
