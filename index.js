@@ -170,7 +170,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
             status: data.status
           };
           console.log(data.status);
-          io.to(curId).emit('friendRequestResponse', { status: data.status });
+          socket.emit('friendRequestResponse', { status: data.status });
           if (data.status == true||data.status == 'true') {
             console.log(JSON.stringify(player));
             player.socketIds.forEach(element => {//todo
