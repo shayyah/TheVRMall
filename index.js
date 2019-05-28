@@ -65,6 +65,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
               player.roomid='';
               player.socketIds.push(curId);
             socket.emit('loginDone', player);
+            //dfsdfds
           });
         }
         else{
