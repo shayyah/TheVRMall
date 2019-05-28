@@ -432,9 +432,10 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
         if(player.roomid!=null)
         {
          // var simpleUser=toSimpleUserMove(player);
-         console.log(player.roomid);
+      //   console.log(player.roomid);
            var room= getRoom(player.roomid);
            if(room!=null){
+             console.log(player.id+'   '+room.usersInRoom);
            for(var i=0;i<room.usersInRoom.length;i++)
            {
              if(room.usersInRoom[i].id!=player.id)
