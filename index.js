@@ -33,7 +33,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
 
     console.log('user connected:' + curId);
     socket.emit('connected');
-
+	//dsadssa
     socket.on('registration', function (data) {//The user ask for registration
       console.log(data);
       getPlayer(data.id, function (player) {
