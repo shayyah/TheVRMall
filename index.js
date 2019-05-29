@@ -376,6 +376,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
                 {
                     AddUserToRoom(rooms[i],player,function(newroom){
                       updatePlayerClothes(data);
+                          console.log('added to room   '+JSON.stringify(newroom));
                       io.to(curId).emit('joinRoomDone',newroom);
 
 
@@ -401,7 +402,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
                     AddUserToRoom(newroom,player,function(nroom){
                //        console.log('33 '+JSON.stringify(player));
                       updatePlayerClothes(data);
-                //        console.log(JSON.stringify(nroom));
+                        console.log('created room   '+JSON.stringify(nroom));
                      io.to(curId).emit('joinRoomDone',nroom);
 
                     });
@@ -435,7 +436,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
       //   console.log(player.roomid);
            var room= getRoom(player.roomid);
            if(room!=null){
-             console.log(player.id+'   '+room.usersInRoom);
+             console.log(player.id+'   '+room.usersInRoom.length);
            for(var i=0;i<room.usersInRoom.length;i++)
            {
              if(room.usersInRoom[i].id!=player.id)
