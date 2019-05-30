@@ -351,8 +351,9 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
 
     });
     socket.on('askForPlayerClothes',function(data){
-      console.log('askforClothes  ');
+      console.log(myId+'  askforClothes  '+data.id);
       getPlayer(data.id,function(player){
+        console.log(player.clothes);
           if(player.clothes!=null)
           {
             console.log(player.clothes);
@@ -436,7 +437,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
       //   console.log(player.roomid);
            var room= getRoom(player.roomid);
            if(room!=null){
-             console.log(player.id+'   '+room.usersInRoom.length);
+          //   console.log(player.id+'   '+room.usersInRoom.length);
            for(var i=0;i<room.usersInRoom.length;i++)
            {
              if(room.usersInRoom[i].id!=player.id)
