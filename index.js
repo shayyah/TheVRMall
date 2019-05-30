@@ -56,7 +56,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
           console.log('player  info   '+player.name);
           myId = player.id;
           var query = { id: player.id };
-          var newvalues = { $set: { online: true, roomid:'' }, $push: { socketIds: socket.id }};
+          var newvalues = { $set: { online: true, roomid:'',socketId:socket.id }, $push: { socketIds: socket.id }};
           dbo.collection(player.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
             if (err) return;
             console.log("1 document updated");
@@ -310,10 +310,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
                       }
                       else{
                           getPlayer(newroom.membersInvited[i].id,function(other){
-                            other.socketIds.forEach(element => {//todo
-                              io.to(element).emit('roominvitation',newroom);
-                            });
-
+                              io.to(other.socketId).emit('roominvitation',newroom);
                           });
                       }
                    }
@@ -336,7 +333,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
               {
                 if(rooms[i].membersInvited[j].id==player.id)
                 {
-                  io.to(curId).emit('roominvitation',rooms[i]);
+                  socket.emit('roominvitation',rooms[i]);
                 }
 
               }
@@ -526,7 +523,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
        name:user.name,
        position:user.position,
        rotation:user.position,
-       socketId:(user.socketIds!=null&&user.socketIds[0]!=null)?user.socketIds[0]:''
+       socketId:user.socketId
      };
      return SimpleUserMove;
 
@@ -576,7 +573,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
       if(rooms[i].id==room.id)
       {
 
-          console.log(rooms[i].id);
+          console.log('room id  '+rooms[i].id);
           user.roomid=rooms[i].id;
           var query = { id: user.id };
           var newvalues = { $set: { roomid: user.roomid } };
@@ -590,12 +587,9 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
             {
                if(rooms[i].usersInRoom[j].id!=user.id)
                {
-                   getPlayer( rooms[i].usersInRoom[j].id,function(other){
-                     other.socketIds.forEach(element => {//todo
-                       io.to(element).emit('newUserAddedToRoom',simpleUser);
-                     });
 
-                     });
+                       io.to(rooms[i].usersInRoom[j].socketId).emit('newUserAddedToRoom',simpleUser);
+
                      //io.to(user.socketId).emit('newUserAddedToRoom',rooms[i].usersInRoom[j]);
                 }
              }
@@ -647,6 +641,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
       id: player.id,
       name: player.name,
       socketIds: [],
+      socketId:socketId,
       online: true,
       lastOnline: new Date(),
       groups: [],
@@ -964,7 +959,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
   //    arrayRemove(sockets, socketId);
     var query = { id: player.id };
     var newvalues = {
-      $set: { online: false, lastOnline: new Date() },
+      $set: { online: false, lastOnline: new Date()},
       $pull: { socketIds: socketId }
     };
     dbo.collection(player.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
