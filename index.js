@@ -79,6 +79,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
 
     });
     });
+
     socket.on('search', function (data) {//Parameter: send the name you are searching for
       getPlayer(myId, function (myPlayer) {
         getSearchedFor(data.name, function (searchResult) {
@@ -293,6 +294,9 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
         });
         console.log('==========\n');
       });
+      socket.on('checkping',function(data){
+          socket.emit('ping',{'status':'true'});
+      });
     socket.on('createRoom',function (data){
       console.log('createRoom')
         console.log(JSON.stringify(data));
@@ -300,7 +304,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
 
             CreateRoom(data,function(room){
                AddUserToRoom(room,player,function(newroom){
-                 console.log('sentCreate   '+JSON.stringify(newroom.membersInvited.length));
+                 console.log('sentCreate   '+JSON.stringify(newroom.membersInvited));
 
                   for(var i=0;i<newroom.membersInvited.length;i++){
                       if(newroom.membersInvited[i].id==player.id)
@@ -411,6 +415,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
         });
 
     });
+
     socket.on('acceptInvitation',function(data){
       getPlayer(myId,function(player){
         for(var i=0;i<rooms.length;i++){
