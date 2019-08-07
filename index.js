@@ -118,7 +118,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
       saveMessageInDB(data.senderId, data.recieverId, data.content, function (message) {
         getPlayer(data.recieverId, function (reciever) {
           console.log('sendMessage');
-
+          socket.emit('messagesent',{'status':'done'});
           if(reciever != null && reciever.online) {
             console.log('userrrr');
             reciever.socketIds.forEach(element => {
@@ -128,6 +128,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
           }
           else if(reciever==null) {//If the reciever id is a group: get the group object then send the message to all its members
               console.log('grouppppp');
+
             getGroup(data.recieverId, function (group) {
               for (var i = 0; i < group.members.length; i++) {
                 if(myId != group.members[i].id) {
