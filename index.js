@@ -295,6 +295,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
         console.log('==========\n');
       });
       socket.on('checkping',function(data){
+        console.log('checkping');
           socket.emit('ping',{'status':'true'});
       });
     socket.on('createRoom',function (data){
