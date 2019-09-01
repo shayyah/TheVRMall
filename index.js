@@ -307,12 +307,12 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
             CreateRoom(data,function(room){
                AddUserToRoom(room,player,function(newroom){
                  console.log('sentCreate   '+JSON.stringify(newroom.membersInvited));
-
+                 io.to(curId).emit('createdroom',newroom);
                   for(var i=0;i<newroom.membersInvited.length;i++){
                       if(newroom.membersInvited[i].id==player.id)
                       {
                         console.log('memberCreatedGroup');
-                        io.to(curId).emit('createdroom',newroom);
+
                       }
                       else{
                           getPlayer(newroom.membersInvited[i].id,function(other){
@@ -462,12 +462,15 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
       console.log('removing user: ' + curId);
       getPlayer(myId, function (player) {
           console.log(JSON.stringify(player));
-        if(player.roomid!='')
-        {
-            LeaveRoom(player);
-          console.log('leaveDRoom');
-        }
-          disconnection(player, socket.id);
+          if(player!=null)
+          {
+            if(player.roomid!='')
+            {
+              LeaveRoom(player);
+            console.log('leaveDRoom');
+            }
+            disconnection(player, socket.id);
+          }
       });
     });
 
@@ -659,7 +662,8 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
       requestsRecieved: [],
       position : pos,
       roomid :'',
-      clothes:''
+      clothes:'',
+      isStore:(player.isStore!=null?player.isStore:false)
     };
     console.log(socketId);
     userToSave.socketIds.push(socketId);
