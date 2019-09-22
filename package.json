@@ -10,7 +10,7 @@
     "type": "git",
     "url": "git+https://github.com/shayyah/TheVRMall.git"
   },
-   "engines": {
+  "engines": {
     "node": "8.12.0"
   },
   "author": "",
