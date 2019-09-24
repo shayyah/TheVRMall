@@ -420,7 +420,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
 
                    //     console.log(JSON.stringify(room));
                     //    console.log('11 '+JSON.stringify(player));
-                        CreateRoom(player.name,[{id:myId,name:player.name}],[],false,function(newroom){
+                        CreateRoom(player.name,[],[],false,function(newroom){
                     //       console.log('22 '+JSON.stringify(player));
                             AddUserToRoom(newroom.id,player,function(nroom){
                        //        console.log('33 '+JSON.stringify(player));
@@ -507,7 +507,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
                 };
 
     addRoomTodataBase(room,function(newroom){
-        callback(room);
+        callback(newroom);
     });
 
 
@@ -518,7 +518,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
     dbo.collection('rooms').insertOne(newroom,function(err,res){
         if(err)callback(null);
         console.log('room inserted  '+res);
-        callback(res);
+        callback(newroom);
     });
   }
   function LeaveRoom(user)
@@ -575,24 +575,32 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
     var newValue={$pull:{usersInRoom:{id:user.id}}};
     dbo.collection('rooms').updateOne(query,newValue,function(err,res){
       if(err)console.log(err);
-      console.log(res);
-      if(res.usersInRoom.length==0)
-      {
-        var del={id:roomid};
-          dbo.collection('rooms').deleteOne(del);
-          callback(null);
-      }
-      else {
-        callback(res);
-      }
+
+      dbo.collection('rooms').findOne(query,function(err1,res1){
+              if(err)console.log(err);
+              else{
+                if(res1.usersInRoom.length==0)
+                {
+                  var del={id:roomid};
+                    dbo.collection('rooms').deleteOne(del);
+                    callback(null);
+                }
+                else {
+                  callback(res1);
+                }
+
+              }
+      })
+
     });
   }
   function AddUserToRoom(roomId,user,callback)
   {
       var simpleUser=toSimpleUserMove(user);
-  //  console.log(room.id+"   "+rooms.length);
-    addUserToRoomData(roomId,simpleUser,function(room){
+    console.log(JSON.stringify(simpleUser)+" adddd  "+roomId);
 
+    addUserToRoomData(roomId,simpleUser,function(room){
+        console.log('useeeeeer aded   '+JSON.stringify(room));
 
         //  console.log('room id  '+rooms[i].id);
           user.roomid=roomId;
@@ -637,8 +645,12 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
       var query={id:id};
       var newValue={$push:{usersInRoom:user}};
       dbo.collection('rooms').updateOne(query,newValue,function(err,res){
-        if(err)callback(null)
-        callback(res);
+        if(err)callback(null);
+      //  console.log(res);
+        dbo.collection('rooms').findOne(query,function(err1,res1){
+          if(err1)callback(null);
+          callback(res1);
+        });
       });
   }
 
