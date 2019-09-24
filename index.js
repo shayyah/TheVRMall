@@ -69,6 +69,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
               player.online=true;
               player.roomid='';
               player.socketIds.push(curId);
+              player.socketId=socket.id;
             socket.emit('loginDone', player);
             //dfsdfds
           });
@@ -108,7 +109,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
           isBlocked(myPlayer.id, player.id, function (blocked) {
               if (!blocked) {
                 console.log('notBlocked');
-                addNewFriend(myId, player.id);
+                addNewFriend(myId,myPlayer.name, player.id,player.name);
                 player.socketIds.forEach(element => {//todo
                   io.to(element).emit('newFriendRequest', myPlayer);
                 });
@@ -652,16 +653,37 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
         }
         else{  console.log(user);
           player = user;
-          player.friends=getAllFriends(player.id);
-          player.requestsRecieved=getAllRequest(player.id);
-          player.requestsSent=getAllRequestsSent(player.id);
-          player.blocks=getAllBlocks(player.id);
-          player.blockedBy=getAllBlockedBy(player.id);
-          callback(player);
+          getAllFriends(player.id,function(friends){
+              player.friends=friends;
+                getAllRequest(player.id,function(requestsRecieved){
+                    player.requestsRecieved=requestsRecieved;
+                      getAllRequestsSent(player.id,function(requestsSent){
+                          player.requestsSent=requestsSent;
+                          getAllBlocks(player.id,function(blocks){
+                            player.blocks=blocks;
+                                getAllBlockedBy(player.id,function(blockedBy){
+                                    player.blockedBy=blockedBy;
+                                    console.log('ppppppp  '+JSON.stringify(player));
+                                    callback(player);
+
+                                })
+                          });
+
+
+                      });
+
+                });
+          });
+
+
+        //  player.blocks= getAllBlocks(player.id);
+      //    player.blockedBy= getAllBlockedBy(player.id);
+
+
       }
     });
   }
-  async function getAllFriends(id)
+  async function getAllFriends(id,callback)
   {
     var query = { firstId:id,state:'friend' };
     var query2 = { secondId:id,state:'friend' };
@@ -680,10 +702,10 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
           allAns.push({id:ans2[i].firstId,name:ans[i].firstName});
       }
     }
-      return allAns;
+      callback(allAns);
 
   }
-  async function getAllBlocks(id)
+  async function getAllBlocks(id,callback)
   {
     var query = { firstId:id,state:'block' };
     var ans=await dbo.collection('friendData').find(query);
@@ -693,10 +715,10 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
             allAns.push({id:ans[i].secondId,name:ans[i].secondName});
         }
     }
-      return allAns;
+      callback(allAns);
 
   }
-  async function getAllBlockedBy(id)
+  async function getAllBlockedBy(id,callback)
   {
     var query = { secondId:id,state:'block' };
     var ans=await dbo.collection('friendData').find(query);
@@ -706,11 +728,11 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
             allAns.push({id:ans[i].firstId,name:ans[i].firstName});
         }
     }
-      return allAns;
+      callback(allAns);
 
   }
 
-  async function getAllRequest(id)
+  async function getAllRequest(id,callback)
   {
     var query = { secondId:id,state:'request' };
     var ans=await dbo.collection('friendData').find(query);
@@ -721,22 +743,24 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
         }
     }
 
-      return allAns;
+      callback(allAns);
 
   }
-  async function getAllRequestsSent(id)
+  async function getAllRequestsSent(id,callback)
   {
     var query = { firstId:id,state:'request' };
-    var ans=await dbo.collection('friendData').find(query);
+    var ans=await dbo.collection('friendData').find(query).toArray();
 
     var allAns=[];
     if(ans!=null){
+      console.log(ans.length);
         for(var i=0;i<ans.length;i++){
             allAns.push({id:ans[i].secondId,name:ans[i].secondName});
         }
     }
-
-      return allAns;
+    console.log(allAns.length);
+    console.log('query done  '+JSON.stringify(ans));
+      callback(allAns);
 
 
   }
