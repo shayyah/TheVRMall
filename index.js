@@ -1001,7 +1001,7 @@ console.log(allAns.length);
     var query = { firstId: myId,secondId:otherId };
     var newvalues = { $set:{state:''} };
 
-      dbo.collection("friendData").updateOne(query,newdata,function(err,res){
+      dbo.collection("friendData").updateOne(query,newvalues,function(err,res){
         if(err)console.log(err);
         else console.log(res);
       });
