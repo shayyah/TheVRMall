@@ -711,7 +711,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
     if(ans2!=null)
     {
       for(var i=0;i<ans2.length;i++){
-          allAns.push({id:ans2[i].firstId,name:ans[i].firstName});
+          allAns.push({id:ans2[i].firstId,name:ans2[i].firstName});
       }
     }
       callback(allAns);
