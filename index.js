@@ -225,7 +225,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
     //    console.log('wwwwww1');
         //removeFriendship(myPlayer, player);
     //      console.log('wwwwww2');
-        blockUser(myId, data.id);
+        blockUser(myId,myPlayer.name, data.id,player.name);
     //      console.log('wwwwww3');
         player.socketIds.forEach(element => {//todo
               io.to(element).emit('UserBlockedYou', myPlayer);
@@ -978,7 +978,7 @@ console.log(allAns.length);
       });
   }
 
-  function blockUser(myId, otherId) {
+  function blockUser(myId,myName, otherId,otherName) {
 
       var query = { firstId: myId,secondId:otherId };
       var newvalues = {$set:{state:'block'} };
@@ -986,7 +986,7 @@ console.log(allAns.length);
         if (err||res==null||res=={})
         {
             query = { firstId: otherId,secondId:myId };
-            newvalues={$set:{firstId:myId,secondId:otherId,state:'block'}};
+            newvalues={$set:{firstId:myId,firstName:myName,secondId:otherId,secondName:otherName,state:'block'}};
         }
         dbo.collection("friendData").updateOne(query,newvalues,function(err,res){
           if(err)console.log(err);
