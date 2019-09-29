@@ -699,8 +699,8 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
   {
     var query = { firstId:id,state:'friend' };
     var query2 = { secondId:id,state:'friend' };
-    var ans=await dbo.collection('friendData').find(query);
-    var ans2=await dbo.collection('friendData').find(query2);
+    var ans=await dbo.collection('friendData').find(query).toArray();
+    var ans2=await dbo.collection('friendData').find(query2).toArray();
 
       var allAns=[];
     if(ans!=null){
@@ -720,7 +720,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
   async function getAllBlocks(id,callback)
   {
     var query = { firstId:id,state:'block' };
-    var ans=await dbo.collection('friendData').find(query);
+    var ans=await dbo.collection('friendData').find(query).toArray();
     var allAns=[];
     if(ans!=null){
         for(var i=0;i<ans.length;i++){
@@ -733,7 +733,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
   async function getAllBlockedBy(id,callback)
   {
     var query = { secondId:id,state:'block' };
-    var ans=await dbo.collection('friendData').find(query);
+    var ans=await dbo.collection('friendData').find(query).toArray();
     var allAns=[];
     if(ans!=null){
         for(var i=0;i<ans.length;i++){
@@ -945,7 +945,11 @@ console.log(allAns.length);
     //Remove request from my list.. I am the reciever
 
     var query={firstId:otherId,secondId:myId,state:'request'};
-    var newvalues={state:((status==true||status=='true')?'friend':'deleted')};
+    console.log(JSON.stringify(query));
+    var newvalues={state:'deleted'};
+    if(status=='true'||status==true)
+        newvalues={state:'friend'};
+    console.log(JSON.stringify(newvalues));
     dbo.collection("friendData").updateOne(query,newvalues,function(err,res){
       if(err)console.log(err);
     //  else console.log(res);
