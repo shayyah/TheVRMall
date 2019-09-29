@@ -747,10 +747,10 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
   async function getAllRequest(id,callback)
   {
     var query = { secondId:id,state:'request' };
-    var ans=await dbo.collection('friendData').find(query);
+    var ans=await dbo.collection('friendData').find(query).toArray();
     var allAns=[];
 
-    console.log('ans   '+ans.length);
+    console.log('ans   '+JSON.stringify(ans)+'   '+ans.length);
     if(ans!=null){
         for(var i=0;i<ans.length;i++){
             allAns.push({id:ans[i].firstId,name:ans[i].firstName});
