@@ -973,7 +973,7 @@ console.log(allAns.length);
           }
           dbo.collection("friendData").updateOne(query,newdata,function(err,res){
             if(err)console.log(err);
-            else console.log(res);
+        //    else console.log(res);
           })
       });
   }
@@ -990,7 +990,7 @@ console.log(allAns.length);
         }
         dbo.collection("friendData").updateOne(query,newvalues,function(err,res){
           if(err)console.log(err);
-          else console.log(res);
+        //  else console.log(res);
         })
       });
 
@@ -1003,7 +1003,7 @@ console.log(allAns.length);
 
       dbo.collection("friendData").updateOne(query,newvalues,function(err,res){
         if(err)console.log(err);
-        else console.log(res);
+      //  else console.log(res);
       });
 
   }
