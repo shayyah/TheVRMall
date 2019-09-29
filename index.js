@@ -946,10 +946,10 @@ console.log(allAns.length);
 
     var query={firstId:otherId,secondId:myId,state:'request'};
     console.log(JSON.stringify(query));
-    var newvalues={state:'deleted'};
+    var newvalues={$set:{state:'deleted'}};
     if(status=='true'||status==true)
-        newvalues={state:'friend'};
-    console.log(JSON.stringify(newvalues));
+        newvalues={$set:{state:'friend'}};
+  //  console.log(JSON.stringify(newvalues));
     dbo.collection("friendData").updateOne(query,newvalues,function(err,res){
       if(err)console.log(err);
     //  else console.log(res);
