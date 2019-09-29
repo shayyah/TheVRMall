@@ -965,7 +965,7 @@ console.log(allAns.length);
 
       //Remove friendship from my list
       var query = { firstId:myId,secondId:otherId };
-      var newdata={state:'deleted'};
+      var newdata={$set:{state:'deleted'}};
       dbo.collection("friendData").findOne(query,function(err,res){
           if(err||res==null||res=={})
           {
@@ -981,14 +981,14 @@ console.log(allAns.length);
   function blockUser(myId, otherId) {
 
       var query = { firstId: myId,secondId:otherId };
-      var newvalues = { state:'block' };
+      var newvalues = {$set:{state:'block'} };
       dbo.collection("friendData").findOne(query,function (err, res) {
         if (err||res==null||res=={})
         {
             query = { firstId: otherId,secondId:myId };
-            newvalues={firstId:myId,secondId:otherId,state:'block'};
+            newvalues={$set:{firstId:myId,secondId:otherId,state:'block'}};
         }
-        dbo.collection("friendData").updateOne(query,newdata,function(err,res){
+        dbo.collection("friendData").updateOne(query,newvalues,function(err,res){
           if(err)console.log(err);
           else console.log(res);
         })
@@ -999,7 +999,7 @@ console.log(allAns.length);
 
   function unblockUser(myId, otherId) {
     var query = { firstId: myId,secondId:otherId };
-    var newvalues = { state:'' };
+    var newvalues = { $set:{state:''} };
 
       dbo.collection("friendData").updateOne(query,newdata,function(err,res){
         if(err)console.log(err);
@@ -1086,14 +1086,14 @@ console.log(allAns.length);
       function changePlayerName(myPlayerId,newName)
       {
         var query={id:myPlayerId};
-        var newdata={name:newName};
+        var newdata={$set:{name:newName} };
         dbo.collection('user').updateOne(query,newdata,function(err,res){
           if(err)return;
           console.log('update name done  '+res);
           var query1={firstId:myPlayerId};
-          var newdata1={firstName:newName};
+          var newdata1={$set:{firstName:newName}};
           var query2={secondId:myPlayerId};
-          var newdata2={secondName:newName};
+          var newdata2={$set:{secondName:newName}};
           dbo.collection('friendData').update(query1,newdata1,function(err, res) {
               if(err) return;
               console.log('11 update');
