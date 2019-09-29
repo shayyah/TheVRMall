@@ -181,7 +181,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
     socket.on('friendRequestHandler', function (data) {//Parameter: send the id of the friend and the status of the request
 
       checkValidId(data.id,function(other){
-        checkValidId(curId,function(myPlayer){
+        checkValidId(myId,function(myPlayer){
 
 
             if(other!=null&&myPlayer!=null){
