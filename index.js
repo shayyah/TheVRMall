@@ -749,12 +749,14 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
     var query = { secondId:id,state:'request' };
     var ans=await dbo.collection('friendData').find(query);
     var allAns=[];
+
+    console.log('ans   '+ans.length);
     if(ans!=null){
         for(var i=0;i<ans.length;i++){
             allAns.push({id:ans[i].firstId,name:ans[i].firstName});
         }
     }
-
+console.log(allAns.length);
       callback(allAns);
 
   }
@@ -765,7 +767,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
 
     var allAns=[];
     if(ans!=null){
-      console.log(ans.length);
+
         for(var i=0;i<ans.length;i++){
             allAns.push({id:ans[i].secondId,name:ans[i].secondName});
         }
@@ -946,7 +948,8 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
     var newvalues={state:((status==true||status=='true')?'friend':'deleted')};
     dbo.collection("friendData").updateOne(query,newvalues,function(err,res){
       if(err)console.log(err);
-      else console.log(res);
+    //  else console.log(res);
+    console.log('update friend done');
     });
 
 
