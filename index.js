@@ -20,13 +20,12 @@ app.get('/', function (req, res) {
   res.send('server working good   '+port);
 });
 //var sockets = [];//todo
-
 MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
   console.log('mongodb connected  '+url);
   if (err) return;
   var dbo = db.db("heroku_pvhp5txw");
   console.log(dbo);
-
+  var rooms=[];
   io.on('connection', function (socket) {
     //sockets.push(socket);
     var curId = socket.id;
@@ -37,7 +36,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
 	//dsadssa
     socket.on('registration', function (data) {//The user ask for registration
       console.log(data);
-      checkValidId(data.id, function (player) {
+      getPlayer(data.id, function (player) {
         if (player == null) {
           savePlayerInDB(data, socket.id, function (player) {
             console.log('player register: ' + player.name);
@@ -54,22 +53,17 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
       console.log('player login: ' + data.name);
       getPlayer(data.id, function (player) {
         if (player != null) {
-          console.log('player  info   '+player.name+ "  "+player.owners);
+          console.log('player  info   '+player.name);
           myId = player.id;
           var query = { id: player.id };
           var newvalues = { $set: { online: true, roomid:'',socketId:socket.id }, $push: { socketIds: socket.id }};
-
-          dbo.collection("user").updateOne(query, newvalues, function (err, res) {
-            if (err){
-              console.log(err);
-              return;
-            }
+          dbo.collection(player.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
+            if (err) return;
             console.log("1 document updated");
               console.log('player login: ' + player.name+'   '+player.id);
               player.online=true;
               player.roomid='';
               player.socketIds.push(curId);
-              player.socketId=socket.id;
             socket.emit('loginDone', player);
             //dfsdfds
           });
@@ -87,7 +81,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
     });
 
     socket.on('search', function (data) {//Parameter: send the name you are searching for
-      checkValidId(myId, function (myPlayer) {
+      getPlayer(myId, function (myPlayer) {
         getSearchedFor(data.name, function (searchResult) {
             console.log("this is the search result: " + searchResult);
             socket.emit('searchResult', { searchResult: searchResult } );
@@ -95,8 +89,8 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
       });
     });
      socket.on('searchbyid', function (data) {//Parameter: send the name you are searching for
-      checkValidId(myId, function (myPlayer) {
-        checkValidId(data.name, function (store) {
+      getPlayer(myId, function (myPlayer) {
+        getPlayer(data.name, function (store) {
           console.log(store);
             if(store!=null)
               socket.emit('searchResultbyid', store );
@@ -104,12 +98,12 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
       });
     });
     socket.on('addFriend', function (data) {//Parametere: send the id of the added friend
-      checkValidId(data.id, function (player) {
-        checkValidId(myId, function (myPlayer) {
-          isBlocked(myPlayer.id, player.id, function (blocked) {
+      getPlayer(data.id, function (player) {
+        getPlayer(myId, function (myPlayer) {
+          isBlocked(myPlayer, player, function (blocked) {
               if (!blocked) {
                 console.log('notBlocked');
-                addNewFriend(myId,myPlayer.name, player.id,player.name);
+                sendRequest(myId, player);
                 player.socketIds.forEach(element => {//todo
                   io.to(element).emit('newFriendRequest', myPlayer);
                 });
@@ -122,7 +116,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
     socket.on('sendMessage', function (data) {
       console.log('message from : ' + data.senderId + ' to: ' + data.recieverId + ' content: ' + data.content);
       saveMessageInDB(data.senderId, data.recieverId, data.content, function (message) {
-        checkValidId(data.recieverId, function (reciever) {
+        getPlayer(data.recieverId, function (reciever) {
           console.log('sendMessage');
           socket.emit('messagesent',{'status':'done'});
           if(reciever != null && reciever.online) {
@@ -138,7 +132,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
             getGroup(data.recieverId, function (group) {
               for (var i = 0; i < group.members.length; i++) {
                 if(myId != group.members[i].id) {
-                  checkValidId(group.members[i].id, function (player) {
+                  getPlayer(group.members[i].id, function (player) {
                     player.socketIds.forEach(element => {//todo
                     io.to(element).emit('newMessage', message);
                   });
@@ -150,17 +144,9 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
         });
       });
     });
-    socket.on('updateName',function(data){
-          checkValidId(myId, function (myPlayer) {
-              if(myPlayer!=null)
-              {
-                  changePlayerName(myId,data.name);
-                  socket.emit('updateNameDone',{status:'done'});
-              }
-          });
-      });
+
     socket.on('getUnreadMessages', function (data) {//TEST again
-      checkValidId(myId, function (myPlayer) {
+      getPlayer(myId, function (myPlayer) {
         getMessages(data.id, myPlayer, function (messages) {
           for (var i = 0; i < messages.length; i++) {
             myPlayer.socketIds.forEach(element => {//todo
@@ -173,38 +159,36 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
     });
 
     socket.on('openChat', function (data) {//Parameter: send the id of the opened user chat (not my id)
-      checkValidId(myId, function (myPlayer) {
+      getPlayer(myId, function (myPlayer) {
         updateMessageState(data.id, myPlayer);
       });
     });
 
     socket.on('friendRequestHandler', function (data) {//Parameter: send the id of the friend and the status of the request
-
-      checkValidId(data.id,function(other){
-        checkValidId(myId,function(myPlayer){
-
-
-            if(other!=null&&myPlayer!=null){
-                handleFriendRequest(myId, data.id, data.status);
-
-                console.log(data.status);
-                socket.emit('friendRequestResponse', { status: data.status });
-                if (data.status == true||data.status == 'true') {
-                  console.log(JSON.stringify(other));
-                  other.socketIds.forEach(element => {//todo
-                    console.log(element);
-                      io.to(element).emit('yourFriendRequestResponse',myPlayer);
-                    });
-                }
-              }
+      getPlayer(data.id, function (player) {
+        getPlayer(myId, function (myPlayer) {
+          handleFriendRequest(myPlayer, player, data.status);
+          var request = {//TOEDIT
+            requestHandler: player,
+            status: data.status
+          };
+          console.log(data.status);
+          socket.emit('friendRequestResponse', { status: data.status });
+          if (data.status == true||data.status == 'true') {
+            console.log(JSON.stringify(player));
+            player.socketIds.forEach(element => {//todo
+              console.log(element);
+                io.to(element).emit('yourFriendRequestResponse',myPlayer);
+              });
+          }
         });
       });
     });
 
     socket.on('removeFriend', function (data) {//Parameter: send the id of the removed friend
-    checkValidId(myId, function (myPlayer) {
-      checkValidId(data.id, function (player) {
-        removeFriendship(myId, data.id);
+    getPlayer(myId, function (myPlayer) {
+      getPlayer(data.id, function (player) {
+        removeFriendship(myPlayer, player);
         player.socketIds.forEach(element => {//todo
           io.to(element).emit('UserRemovedYou', myPlayer);
         });
@@ -220,12 +204,12 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
 
     socket.on('block', function (data) {//Parameter: send the id of the user to block
     //  console.log('wwwwww');
-      checkValidId(myId, function(myPlayer) {
-      checkValidId(data.id, function (player) {
+      getPlayer(myId, function(myPlayer) {
+      getPlayer(data.id, function (player) {
     //    console.log('wwwwww1');
-        //removeFriendship(myPlayer, player);
+        removeFriendship(myPlayer, player);
     //      console.log('wwwwww2');
-        blockUser(myId,myPlayer.name, data.id,player.name);
+        blockUser(myId, player);
     //      console.log('wwwwww3');
         player.socketIds.forEach(element => {//todo
               io.to(element).emit('UserBlockedYou', myPlayer);
@@ -241,11 +225,11 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
     });
 
     socket.on('removeBlock', function (data) {//Parameter: send the id of the user to remove block
-      checkValidId(data.id, function (player) {
-      checkValidId(myId, function (myPlayer) {
-        isBlocked(myId, player.id, function (blocked) {
+      getPlayer(data.id, function (player) {
+      getPlayer(myId, function (myPlayer) {
+        isBlocked(myPlayer, player, function (blocked) {
           if (blocked) {
-            unblockUser(myId, player.id);
+            unblockUser(myId, player);
 
             player.socketIds.forEach(element => {//todo
               io.to(element).emit('blockRemoved', myPlayer);
@@ -318,10 +302,10 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
     socket.on('createRoom',function (data){
       console.log('createRoom')
         console.log(JSON.stringify(data));
-        checkValidId(myId,function(player){
+        getPlayer(myId,function(player){
 
-            CreateRoom(data.name,data.membersInvited,data.usersInRoom,true,function(room){
-               AddUserToRoom(room.id,player,function(newroom){
+            CreateRoom(data,function(room){
+               AddUserToRoom(room,player,function(newroom){
                  console.log('sentCreate   '+JSON.stringify(newroom.membersInvited));
                  io.to(curId).emit('createdroom',newroom);
                   for(var i=0;i<newroom.membersInvited.length;i++){
@@ -331,7 +315,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
 
                       }
                       else{
-                          checkValidId(newroom.membersInvited[i].id,function(other){
+                          getPlayer(newroom.membersInvited[i].id,function(other){
                               io.to(other.socketId).emit('roominvitation',newroom);
                           });
                       }
@@ -343,28 +327,24 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
 
     });
     socket.on('askforRooms',function(data){
-      checkValidId(data.id,function(player){
-        //console.log('askforRooms  '+player.name +'   '+rooms.length);
+      getPlayer(data.id,function(player){
+        console.log('askforRooms  '+player.name +'   '+rooms.length);
         if(player!=null){
-          getPublicRooms(function(rooms){
+          for(var i=0;i<rooms.length;i++)
+          {
 
+            if(rooms[i].isprivate==true){
+              console.log('room  '+rooms[i].name+'   '+rooms[i].membersInvited.length);
+              for(var j=0;j<rooms[i].membersInvited.length;j++)
+              {
+                if(rooms[i].membersInvited[j].id==player.id)
+                {
+                  socket.emit('roominvitation',rooms[i]);
+                }
 
-                  for(var i=0;i<rooms.length;i++)
-                  {
-
-                    if(rooms[i].isprivate==true){
-                      console.log('room  '+rooms[i].name+'   '+rooms[i].membersInvited.length);
-                      for(var j=0;j<rooms[i].membersInvited.length;j++)
-                      {
-                        if(rooms[i].membersInvited[j].id==player.id)
-                        {
-                          socket.emit('roominvitation',rooms[i]);
-                        }
-
-                      }
-                    }
-                  }
-            });
+              }
+            }
+          }
         }
       });
 
@@ -375,7 +355,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
     });
     socket.on('askForPlayerClothes',function(data){
       console.log(myId+'  askforClothes  '+data.id);
-      checkValidId(data.id,function(player){
+      getPlayer(data.id,function(player){
         console.log(player.clothes);
           if(player.clothes!=null)
           {
@@ -390,97 +370,97 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
     socket.on('joinRandomGroup',function(data){
        console.log('joinRandomGroup')
       // console.log(JSON.stringify(data));
-        checkValidId(myId,function(player){
-
+        getPlayer(myId,function(player){
+            var done=false;
             //console.log(player);
-            getPublicRooms(function(rooms){
-
-                  var done=false;
-                    if(rooms!=null){
           //  console.log(rooms.length);
-                        for(var i=0;i<rooms.length;i++)
-                        {
-                            if(rooms[i].usersInRoom.length<10)
-                            {
-                                AddUserToRoom(rooms[i].id,player,function(newroom){
-                                  updatePlayerClothes(data);
-                                      console.log('added to room   '+JSON.stringify(newroom));
-                                  io.to(curId).emit('joinRoomDone',newroom);
+            for(var i=0;i<rooms.length;i++)
+            {
+                if(!rooms[i].isprivate&&rooms[i].usersInRoom.length<20)
+                {
+                    AddUserToRoom(rooms[i],player,function(newroom){
+                      updatePlayerClothes(data);
+                          console.log('added to room   '+JSON.stringify(newroom));
+                      io.to(curId).emit('joinRoomDone',newroom);
 
 
-                                  });
-                              done=true;
-                               break;
-                            }
-                        }
-                  }
-                    if(!done)
-                    {
+                  });
+                  done=true;
+                   break;
+                }
+            }
+            if(!done)
+            {
 
+                var room={
+                        id:shortid.generate(),
+                        name:player.name,
+                        membersInvited:[],
+                        usersInRoom:[],
+                        isprivate:false
+                };
+           //     console.log(JSON.stringify(room));
+            //    console.log('11 '+JSON.stringify(player));
+                CreateRoom(room,function(newroom){
+            //       console.log('22 '+JSON.stringify(player));
+                    AddUserToRoom(newroom,player,function(nroom){
+               //        console.log('33 '+JSON.stringify(player));
+                      updatePlayerClothes(data);
+                        console.log('created room   '+JSON.stringify(nroom));
+                     io.to(curId).emit('joinRoomDone',nroom);
 
-                   //     console.log(JSON.stringify(room));
-                    //    console.log('11 '+JSON.stringify(player));
-                        CreateRoom(player.name,[],[],false,function(newroom){
-                    //       console.log('22 '+JSON.stringify(player));
-                            AddUserToRoom(newroom.id,player,function(nroom){
-                       //        console.log('33 '+JSON.stringify(player));
-                              updatePlayerClothes(data);
-                                console.log('created room   '+JSON.stringify(nroom));
-                             io.to(curId).emit('joinRoomDone',nroom);
+                    });
 
-                            });
+                });
+            }
 
-                        });
-                    }
-              });
         });
 
     });
 
     socket.on('acceptInvitation',function(data){
-      checkValidId(myId,function(player){
-        getRoomById(data.id,function(room){
-
-            AddUserToRoom(room.id,player,function(nroom){
+      getPlayer(myId,function(player){
+        for(var i=0;i<rooms.length;i++){
+          if(rooms[i].id==data.id)
+          {
+            AddUserToRoom(rooms[i],player,function(nroom){
                  io.to(curId).emit('joinRoomDone',nroom);
-               });
-
+            });
+            break;
+          }
+        }
       });
 
     });
-  });
     socket.on('moveInMall',function(data){
       //console.log('move   '+data);
-      checkValidId(data.id,function(player){
+      getPlayer(data.id,function(player){
         if(player.roomid!=null)
         {
          // var simpleUser=toSimpleUserMove(player);
       //   console.log(player.roomid);
-           getRoomById(player.roomid,function(room){
-              if(room!=null){
-            //   console.log(player.id+'   '+room.usersInRoom.length);
-                 for(var i=0;i<room.usersInRoom.length;i++)
-                 {
-                   if(room.usersInRoom[i].id!=player.id)
-                    io.to(room.usersInRoom[i].socketId).emit('MoveInfo',data);
-                 }
-               }
-
-           });
-
+           var room= getRoom(player.roomid);
+           if(room!=null){
+          //   console.log(player.id+'   '+room.usersInRoom.length);
+           for(var i=0;i<room.usersInRoom.length;i++)
+           {
+             if(room.usersInRoom[i].id!=player.id)
+              io.to(room.usersInRoom[i].socketId).emit('MoveInfo',data);
+           }
+          }
         }
 
     });
 
     });
     socket.on('leaveRoom',function(data){
-        checkValidId(data.id,function(player){
+        getPlayer(data.id,function(player){
             LeaveRoom(player);
         });
     });
     socket.on('disconnect', function () {//The user closed the app (disconnected)..
       console.log('removing user: ' + curId);
-      checkValidId(myId, function (player) {
+      getPlayer(myId, function (player) {
           console.log(JSON.stringify(player));
           if(player!=null)
           {
@@ -495,58 +475,57 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
     });
 
   });
-
-  function CreateRoom(rname,rmembersInvited,rusersInRoom,risPrivate,callback)
+  function CreateRoom(newroom,callback)
   {
     var room={
                         id:shortid.generate(),
-                        name:rname,
-                        membersInvited:rmembersInvited,
-                        usersInRoom:rusersInRoom,
-                        isprivate:risPrivate
+                        name:newroom.name,
+                        membersInvited:newroom.membersInvited,
+                        usersInRoom:newroom.usersInRoom,
+                        isprivate:newroom.isprivate
                 };
 
-    addRoomTodataBase(room,function(newroom){
-        callback(newroom);
-    });
+      rooms.push(room);
 
+      callback(room);
 
-
-  }
-  function addRoomTodataBase(newroom,callback)
-  {
-    dbo.collection('rooms').insertOne(newroom,function(err,res){
-        if(err)callback(null);
-        console.log('room inserted  '+res);
-        callback(newroom);
-    });
   }
   function LeaveRoom(user)
   {
 
-    RemouveUserFromRoom(user.roomid,user,function(room){
+    RemouveUserFromRoom(user.roomid,user);
+    var roomId=user.roomid;
+
+    user.roomid="";
       var query = { id: user.id };
           var newvalues = { $set: { roomid: '' } };
           dbo.collection("user").updateOne(query, newvalues, function (err, res) {
             if (err) return;
-        });
-        if(room!=null)
-        {
             var simpleUser=toSimpleUserMove(user);
-          for(var j=0;j<room.usersInRoom.length;j++)
-          {
-                io.to(room.usersInRoom[j].socketId).emit('playerLeaveRoom',simpleUser);
-          }
+            console.log('roomId   '+roomId);
+      for(var i=0;i<rooms.length;i++)
+      {
+        if(rooms[i].id==roomId)
+        {
+            for(var j=0;j<rooms[i].usersInRoom.length;j++)
+            {
+                  io.to(rooms[i].usersInRoom[j].socketId).emit('playerLeaveRoom',simpleUser);
+            }
+            break;
         }
-
-    });
-
-
-
-
+      }
+          });
   }
 
-
+  function getRoom(id)
+  {
+    for(var i=0;i<rooms.length;i++)
+    {
+      if(rooms[i].id==id)
+        return rooms[i];
+    }
+    return null;
+  }
   function toSimpleUserMove(user)
   {
     var SimpleUserMove={
@@ -567,224 +546,94 @@ MongoClient.connect(url, { useNewUrlParser: true }, function (err, db) {
      };
      return simpleUser;
   }
-  function RemouveUserFromRoom(roomid,user,callback)
+  function RemouveUserFromRoom(roomid,user)
   {
-    console.log('remouveUserFromGroup'  +user);
-    var query={id:roomid};
-  //  var simpleUser=toSimpleUserMove(user);
-    var newValue={$pull:{usersInRoom:{id:user.id}}};
-    dbo.collection('rooms').updateOne(query,newValue,function(err,res){
-      if(err)console.log(err);
+    console.log('remouveUserFromGroup   '  +roomid);
+    console.log(JSON.stringify(user));
+    for(var i=0;i<rooms.length;i++)
+    {
+      if(rooms[i].id==roomid)
+      {
+         console.log(rooms[i].usersInRoom.length);
+        for(var j=0;j<rooms[i].usersInRoom.length;j++)
+          {
+              if(rooms[i].usersInRoom[j].id==user.id)
+              {
 
-      dbo.collection('rooms').findOne(query,function(err1,res1){
-              if(err)console.log(err);
-              else{
-                if(res1.usersInRoom.length==0)
-                {
-                  var del={id:roomid};
-                    dbo.collection('rooms').deleteOne(del);
-                    callback(null);
-                }
-                else {
-                  callback(res1);
-                }
-
+                console.log(JSON.stringify(rooms[i]));
+                   rooms[i].usersInRoom.splice(j,1);
+                   break;
               }
-      })
-
-    });
+          }
+           console.log(rooms[i].usersInRoom.length);
+          if(rooms[i].usersInRoom.length==0)
+          {
+            rooms.splice(i,1);
+          }
+          break;
+      }
+    }
+    console.log(rooms.length);
   }
-  function AddUserToRoom(roomId,user,callback)
+  function AddUserToRoom(room,user,callback)
   {
-      var simpleUser=toSimpleUserMove(user);
-    console.log(JSON.stringify(simpleUser)+" adddd  "+roomId);
+    console.log(room.id+"   "+rooms.length);
+    for(var i=0;i<rooms.length;i++)
+    {
+      if(rooms[i].id==room.id)
+      {
 
-    addUserToRoomData(roomId,simpleUser,function(room){
-        console.log('useeeeeer aded   '+JSON.stringify(room));
-
-        //  console.log('room id  '+rooms[i].id);
-          user.roomid=roomId;
+          console.log('room id  '+rooms[i].id);
+          user.roomid=rooms[i].id;
           var query = { id: user.id };
           var newvalues = { $set: { roomid: user.roomid } };
-          dbo.collection('user').updateOne(query, newvalues, function (err, res) {
+          dbo.collection("user").updateOne(query, newvalues, function (err, res) {
             if (err) return;
-
+              var simpleUser=toSimpleUserMove(user);
           //console.log('simpleUserMove  '+simpleUser);
-             for(var j=0;j< room.usersInRoom.length;j++)
+             rooms[i].usersInRoom.push(simpleUser);
+             console.log(rooms[i].usersInRoom.length);
+             for(var j=0;j< rooms[i].usersInRoom.length;j++)
             {
-               if(room.usersInRoom[j].id!=user.id)
+               if(rooms[i].usersInRoom[j].id!=user.id)
                {
 
-                       io.to(room.usersInRoom[j].socketId).emit('newUserAddedToRoom',simpleUser);
+                       io.to(rooms[i].usersInRoom[j].socketId).emit('newUserAddedToRoom',simpleUser);
 
                      //io.to(user.socketId).emit('newUserAddedToRoom',rooms[i].usersInRoom[j]);
                 }
              }
-             callback(room);
+          callback(rooms[i]);
           });
-        });
-  }
-  function getRoomById(id,callback)
-  {
-    var query={id:id};
-    dbo.collection('rooms').findOne(query,function(err,res){
-        if(err)callback(null);
-        callback(res);
-    });
-  }
-  function getPublicRooms(callback)
-  {
-    var query={isprivate:false};
-    dbo.collection('rooms').find(query).toArray(function(err,res){
-        if(err)callback(null);
-        callback(res);
-    });
-  }
-  function addUserToRoomData(id,user,callback)
-  {
-      var query={id:id};
-      var newValue={$push:{usersInRoom:user}};
-      dbo.collection('rooms').updateOne(query,newValue,function(err,res){
-        if(err)callback(null);
-      //  console.log(res);
-        dbo.collection('rooms').findOne(query,function(err1,res1){
-          if(err1)callback(null);
-          callback(res1);
-        });
-      });
+
+          break;
+      }
+    }
   }
 
   function getPlayer(id, callback) {
     var query = { id: id };
     var player = null;
-    dbo.collection('user').findOne(query, function (err, user) {
-        if(err||user==null||user==undefined){
-            console.log(err);
-            console.log(user);
-              callback(null);
-        }
-        else{  console.log(user);
-          player = user;
-          getAllFriends(player.id,function(friends){
-              player.friends=friends;
-                getAllRequest(player.id,function(requestsRecieved){
-                    player.requestsRecieved=requestsRecieved;
-                      getAllRequestsSent(player.id,function(requestsSent){
-                          player.requestsSent=requestsSent;
-                          getAllBlocks(player.id,function(blocks){
-                            player.blocks=blocks;
-                                getAllBlockedBy(player.id,function(blockedBy){
-                                    player.blockedBy=blockedBy;
-                                    console.log('ppppppp  '+JSON.stringify(player));
-                                    callback(player);
-
-                                })
-                          });
-
-
-                      });
-
-                });
-          });
-
-
-        //  player.blocks= getAllBlocks(player.id);
-      //    player.blockedBy= getAllBlockedBy(player.id);
-
-
+    dbo.collection("user").findOne(query, function (err, user) {
+      if (user != null) {
+     //   console.log('get user: ' + user.name);
+        player = user;
       }
+      dbo.collection("store").findOne(query, function (err, store) {
+        if (store != null) {
+          console.log('get store: ' + store.name);
+          player = store;
+        }
+        callback(player);
+      });
     });
   }
-  async function getAllFriends(id,callback)
-  {
-    var query = { firstId:id,state:'friend' };
-    var query2 = { secondId:id,state:'friend' };
-    var ans=await dbo.collection('friendData').find(query).toArray();
-    var ans2=await dbo.collection('friendData').find(query2).toArray();
-
-      var allAns=[];
-    if(ans!=null){
-        for(var i=0;i<ans.length;i++){
-            allAns.push({id:ans[i].secondId,name:ans[i].secondName});
-        }
-    }
-    if(ans2!=null)
-    {
-      for(var i=0;i<ans2.length;i++){
-          allAns.push({id:ans2[i].firstId,name:ans2[i].firstName});
-      }
-    }
-      callback(allAns);
-
-  }
-  async function getAllBlocks(id,callback)
-  {
-    var query = { firstId:id,state:'block' };
-    var ans=await dbo.collection('friendData').find(query).toArray();
-    var allAns=[];
-    if(ans!=null){
-        for(var i=0;i<ans.length;i++){
-            allAns.push({id:ans[i].secondId,name:ans[i].secondName});
-        }
-    }
-      callback(allAns);
-
-  }
-  async function getAllBlockedBy(id,callback)
-  {
-    var query = { secondId:id,state:'block' };
-    var ans=await dbo.collection('friendData').find(query).toArray();
-    var allAns=[];
-    if(ans!=null){
-        for(var i=0;i<ans.length;i++){
-            allAns.push({id:ans[i].firstId,name:ans[i].firstName});
-        }
-    }
-      callback(allAns);
-
-  }
-
-  async function getAllRequest(id,callback)
-  {
-    var query = { secondId:id,state:'request' };
-    var ans=await dbo.collection('friendData').find(query).toArray();
-    var allAns=[];
-
-    console.log('ans   '+JSON.stringify(ans)+'   '+ans.length);
-    if(ans!=null){
-        for(var i=0;i<ans.length;i++){
-            allAns.push({id:ans[i].firstId,name:ans[i].firstName});
-        }
-    }
-console.log(allAns.length);
-      callback(allAns);
-
-  }
-  async function getAllRequestsSent(id,callback)
-  {
-    var query = { firstId:id,state:'request' };
-    var ans=await dbo.collection('friendData').find(query).toArray();
-
-    var allAns=[];
-    if(ans!=null){
-
-        for(var i=0;i<ans.length;i++){
-            allAns.push({id:ans[i].secondId,name:ans[i].secondName});
-        }
-    }
-    console.log(allAns.length);
-    console.log('query done  '+JSON.stringify(ans));
-      callback(allAns);
-
-
-  }
-
   function updatePlayerClothes(player)
   {
     console.log('updateClothes   '+player.clothes);
     var query = { id: player.id };
     var newvalues = { $set: { clothes: player.clothes } };
-    dbo.collection('user').updateOne(query, newvalues, function (err, res) {
+    dbo.collection("user").updateOne(query, newvalues, function (err, res) {
       if (err) return;
     });
 
@@ -862,7 +711,7 @@ console.log(allAns.length);
 
   function saveMessageInDB(senderId, recieverId, content, callback) {
     var isOnline = false;
-    checkValidId(recieverId, function (reciever) {
+    getPlayer(recieverId, function (reciever) {
       if (reciever != null) {
         isOnline = reciever.online;
       }
@@ -894,118 +743,160 @@ console.log(allAns.length);
   function getSearchedFor(name, callback) {
     var query = { name: { $regex : ".*" + name + ".*" } };
     var result = [];
+    dbo.collection("store").find(query).toArray(function (err, res) {
+      if (err) return;
+      for (var i = 0; i < res.length; i++) {
+        result.push(res[i]);
+      }
+    });
     dbo.collection("user").find(query).toArray(function (err, res) {//TODO: exclude the users who has stores
       if (err) return;
       for (var i = 0; i < res.length; i++) {
-
+        if (result.filter(obj => { return obj.id == res[i].id }).length == 0) {
           result.push(res[i]);
-
+        }
       }
       callback(result);
     });
   }
 
-  function isBlocked(myPlayerId, otherId, callback) {
+  function isBlocked(myPlayer, player, callback) {
+    //Temporary by salim
 
-      var query = {firstId:myPlayerId,secondId:otherId,state:'block'};
-      dbo.collection("friendData").findOne(query,function(err,res){
-            if(err||res==null||res=={})
-            {
-                query.firstId=otherId;
-                query.secondId=myPlayerId;
-                  dbo.collection("friendData").findOne(query,function(err,res){
-                          if(err||res==null||res=={})
-                              callback(false);
-                          else callback(true);
-                  });
-            }
-            else callback(true);
-      });
+    var iBlockedHim = myPlayer.blocks.find(function (user) {
+      return user.id == player.id;
+    }) == undefined ? false : true;
 
+    var heBlockedMe = player.blocks.find(function (user) {
+      return user.id == myPlayer.id;
+    }) == undefined ? false : true;
+
+    if (iBlockedHim || heBlockedMe) {
+      callback(true, myPlayer);
+    } else {
+      callback(false, myPlayer);
+    }
   }
 
+  function sendRequest(myId, player) {
+    getPlayer(myId, function (myPlayer) {
+      //Update my requestsSent list
+      var query = { id: myPlayer.id };
 
-  function addNewFriend(myId, myName,otherId,otherName)
-  {
-      var request={
-        id:shortid.generate(),
-        firstId:myId,
-        firstName:myName,
-        secondId:otherId,
-        secondName:otherName,
-        state:'request'
-      };
-      dbo.collection("friendData").insertOne(request, function (err, res) {
+      var newvalues = { $push: { requestsSent: { id: player.id, name: player.name } } };
+      dbo.collection(myPlayer.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
         if (err) return;
-        console.log("1 request inserted: " + request);
-
+        console.log("1 requestsSent inserted");
       });
-  }
-  function handleFriendRequest(myId, otherId, status) {
-    //Remove request from my list.. I am the reciever
 
-    var query={firstId:otherId,secondId:myId,state:'request'};
-    console.log(JSON.stringify(query));
-    var newvalues={$set:{state:'deleted'}};
-    if(status=='true'||status==true)
-        newvalues={$set:{state:'friend'}};
-  //  console.log(JSON.stringify(newvalues));
-    dbo.collection("friendData").updateOne(query,newvalues,function(err,res){
-      if(err)console.log(err);
-    //  else console.log(res);
-    console.log('update friend done');
+      //Update their requestsRecieved list
+      var query2 = { id: player.id };
+      var newvalues2 = { $push: { requestsRecieved: { id: myPlayer.id, name: myPlayer.name } } };
+      dbo.collection(player.owners == undefined ? "user" : "store").updateOne(query2, newvalues2, function (err, res) {
+        if (err) return;
+        console.log("1 requestsRecieved inserted");
+      });
+    });
+  }
+
+  function handleFriendRequest(myPlayer,  player, status) {
+    //Remove request from my list.. I am the reciever
+    var query = { id: myPlayer.id };
+    var newvalues = { $pull: { requestsRecieved: { id: player.id, name: player.name } } };
+    dbo.collection(myPlayer.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
+      if (err) return;
+      console.log("1 friendshipRecieved removed");
     });
 
+    //Remove request from their list.. they are the senders
+    var query = { id: player.id };
+    var newvalues = { $pull: { requestsSent: { id: myPlayer.id, name: myPlayer.name } } };
+    dbo.collection(player.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
+      if (err) return;
+      console.log("1 requestSent removed");
+    });
 
+    if (status) {
+      addFriend(myPlayer, player);
+    }
   }
 
+  function addFriend(myPlayer, player) {
+    //Update my friends list
+    var query = { id: myPlayer.id };
+    var newvalues = { $push: { friends: { id: player.id, name: player.name } } };
+    dbo.collection(myPlayer.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
+      if (err) return;
+      console.log("1 friendship inserted");
+    });
+    //Update their friends list
+    query = { id: player.id };
+    newvalues = { $push: { friends: { id: myPlayer.id, name: myPlayer.name } } };
+    dbo.collection(player.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
+      if (err) return;
+      console.log("1 friendship inserted");
+    });
+  }
 
-
-  function removeFriendship(myId, otherId) {
+  function removeFriendship(myPlayer, player) {
 
       //Remove friendship from my list
-      var query = { firstId:myId,secondId:otherId };
-      var newdata={$set:{state:'deleted'}};
-      dbo.collection("friendData").findOne(query,function(err,res){
-          if(err||res==null||res=={})
-          {
-                query = { firstId:otherId,secondId:myId };
-          }
-          dbo.collection("friendData").updateOne(query,newdata,function(err,res){
-            if(err)console.log(err);
-        //    else console.log(res);
-          })
-      });
-  }
-
-  function blockUser(myId,myName, otherId,otherName) {
-
-      var query = { firstId: myId,secondId:otherId };
-      var newvalues = {$set:{state:'block'} };
-      dbo.collection("friendData").findOne(query,function (err, res) {
-        if (err||res==null||res=={})
-        {
-            query = { firstId: otherId,secondId:myId };
-            newvalues={$set:{firstId:myId,firstName:myName,secondId:otherId,secondName:otherName,state:'block'}};
-        }
-        dbo.collection("friendData").updateOne(query,newvalues,function(err,res){
-          if(err)console.log(err);
-        //  else console.log(res);
-        })
+      var query = { id: myPlayer.id };
+      var newvalues = { $pull: { friends: { id: player.id, name: player.name } } };
+      dbo.collection(myPlayer.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
+        if (err) return;
+        console.log("1 friendship removed");
       });
 
+      //Remove friendship from their list
+      var query = { id: player.id };
+      var newvalues = { $pull: { friends: { id: myPlayer.id, name: myPlayer.name } } };
+      dbo.collection(player.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
+        if (err) return;
+        console.log("1 friendship removed");
+      });
 
   }
 
-  function unblockUser(myId, otherId) {
-    var query = { firstId: myId,secondId:otherId };
-    var newvalues = { $set:{state:''} };
+  function blockUser(myId, player) {
+    getPlayer(myId, function (myPlayer) {
 
-      dbo.collection("friendData").updateOne(query,newvalues,function(err,res){
-        if(err)console.log(err);
-      //  else console.log(res);
+      //Update my friends list
+      var query = { id: myPlayer.id };
+      var newvalues = { $push: { blocks: { id: player.id, name: player.name } } };
+      dbo.collection(myPlayer.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
+        if (err) return;
+        console.log("1 block inserted");
+      });
+      //Update their friends list
+      query = { id: player.id };
+      newvalues = { $push: { blockedBy: { id: myPlayer.id, name: myPlayer.name } } };
+      dbo.collection(player.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
+        if (err) return;
+        console.log("1 blockedBy inserted");
+      });
+    });
+  }
+
+  function unblockUser(myId, player) {
+    getPlayer(myId, function (myPlayer) {
+
+      //Remove block from my list
+      var query = { id: myPlayer.id };
+      var newvalues = { $pull: { blocks: { id: player.id, name: player.name } } };
+      dbo.collection(myPlayer.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
+        if (err) return;
+        console.log("1 block removed");
       });
 
+      //Remove blockedBy from their list
+      var query = { id: player.id };
+      var newvalues = { $pull: { blockedBy: { id: myPlayer.id, name: myPlayer.name } } };
+      dbo.collection(player.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
+        if (err) return;
+        console.log("1 blockedBy removed");
+      });
+    });
   }
 
   function createGroup(group, callback) {
@@ -1017,7 +908,7 @@ console.log(allAns.length);
       group = res.ops[0];
       console.log("1 group inserted");
       for (var i = 0; i < group.members.length; i++) {
-        checkValidId(group.members[i].id, function (player) {
+        getPlayer(group.members[i].id, function (player) {
           addGroupToMember(group, player);
         });
       }
@@ -1055,13 +946,6 @@ console.log(allAns.length);
       callback(res);
     });
   }
-  function checkValidId(id,callback)
-  {
-    dbo.collection("user").findOne({id:id}, function (err, res) {
-      if (err) callback(null);
-      callback(res);
-    });
-  }
   function removeMemberFromGroup(group, memberId, callback) {
       getPlayer(memberId, function (player) {
         var query = { id: group.id };
@@ -1082,28 +966,6 @@ console.log(allAns.length);
                 console.log("1 group removed from user: " + player.name);
               });
             }
-
-      function changePlayerName(myPlayerId,newName)
-      {
-        var query={id:myPlayerId};
-        var newdata={$set:{name:newName} };
-        dbo.collection('user').updateOne(query,newdata,function(err,res){
-          if(err)return;
-          console.log('update name done  '+res);
-          var query1={firstId:myPlayerId};
-          var newdata1={$set:{firstName:newName}};
-          var query2={secondId:myPlayerId};
-          var newdata2={$set:{secondName:newName}};
-          dbo.collection('friendData').update(query1,newdata1,function(err, res) {
-              if(err) return;
-              console.log('11 update');
-          });
-          dbo.collection('friendData').update(query2,newdata2,function(err, res) {
-              if(err) return;
-              console.log('22 update');
-          });
-        });
-      }
   function disconnection(player,socketId) {
   //    arrayRemove(sockets, socketId);
     var query = { id: player.id };
@@ -1111,7 +973,7 @@ console.log(allAns.length);
       $set: { online: false, lastOnline: new Date()},
       $pull: { socketIds: socketId }
     };
-    dbo.collection("user").updateOne(query, newvalues, function (err, res) {
+    dbo.collection(player.owners == undefined ? "user" : "store").updateOne(query, newvalues, function (err, res) {
       if (err) return;
       console.log("1 document updated");
     });
