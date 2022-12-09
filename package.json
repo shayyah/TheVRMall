@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/shayyah/TheVRMall#readme",
   "dependencies": {
-    "express": "^4.16.4",
+    "express": "^4.17.3",
     "mongodb": "^3.1.13",
     "short-id": "0.1.0-1",
     "socket.io": "^2.2.0"
